@@ -5,17 +5,36 @@ function captureLoginValues() {
     const emailValue = document.getElementById('email1').value;
     const passwordValue = document.getElementById('password1').value;
     const quadro = document.getElementById('resultadoLogin');
+    try {
+        verificarVazios(emailValue, passwordValue);
+        verificarEmail(emailValue);
+    } catch (error) {
+        quadro.innerHTML = "";
+        const pre = document.createElement('pre');
+        const code = document.createElement('code');
+        code.innerHTML = error;
+        pre.appendChild(code);
+        quadro.appendChild(pre);
+        return;
+    }
 
-    fetch(`http://localhost:5249/api/User?email=${emailValue}&password=${passwordValue}`, {
+
+    const formData = {
+        email: emailValue,
+        password: passwordValue
+    };
+    fetch('http://localhost:5249/api/User', {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
-        }
+        },
+        body: JSON.stringify(formData),
     })
         .then(response => response.json())
         .then(data => {
             console.log(data);
 
+            quadro.innerHTML = "";
             const pre = document.createElement('pre');
             const code = document.createElement('code');
             code.innerHTML = JSON.stringify(data, null, 2);
@@ -23,8 +42,14 @@ function captureLoginValues() {
             quadro.appendChild(pre);
         })
         .catch(error => {
-            console.log(error);
+            quadro.innerHTML = "";
+            const pre = document.createElement('pre');
+            const code = document.createElement('code');
+            code.innerHTML = error;
+            pre.appendChild(code);
+            quadro.appendChild(pre);
         });
+
 }
 
 // Função para capturar valores do formulário de cadastro
@@ -42,47 +67,55 @@ function captureCadastroValues() {
 
     try {
         verificarCampos(nomeValue, cpfValue, telefoneValue, emailValue, cepValue, numeroValue, passwordValue, confirmValue);
-
-        // Preparar os dados do formulário para enviar
-        const formData = {
-            email: emailValue,
-            password: passwordValue,
-            name: nomeValue,
-            phone: telefoneValue,
-            cpf: cpfValue,
-            address: cepValue, // Usando CEP como endereço
-            addressNumber: numeroValue
-        };
-
-        // Enviar os dados do formulário para a API
-        fetch('http://localhost:5249/api/User', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData),
-        })
-            .then(response => response.json())
-            .then(data => {
-                console.log(data);
-                // Exibir os dados de resposta no quadro
-                const pre = document.createElement('pre');
-                const code = document.createElement('code');
-                code.innerHTML = JSON.stringify(data, null, 2);
-                pre.appendChild(code);
-                quadro.appendChild(pre);
-            })
-            .catch(error => {
-                console.error(error);
-            });
-
-    } catch (e) {
+    } catch (error) {
+        quadro.innerHTML = "";
         const pre = document.createElement('pre');
         const code = document.createElement('code');
-        code.innerHTML = e;
+        code.innerHTML = error;
         pre.appendChild(code);
         quadro.appendChild(pre);
+        return;
     }
+    // Preparar os dados do formulário para enviar
+    const formData = {
+        email: emailValue,
+        password: passwordValue,
+        name: nomeValue,
+        phone: telefoneValue,
+        cpf: cpfValue,
+        address: cepValue, // Usando CEP como endereço
+        addressNumber: numeroValue
+    };
+
+    // Enviar os dados do formulário para a API
+    fetch('http://localhost:5249/api/User', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+    })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);
+            // Exibir os dados de resposta no quadro
+            quadro.innerHTML = "";
+            const pre = document.createElement('pre');
+            const code = document.createElement('code');
+            code.innerHTML = JSON.stringify(data, null, 2);
+            pre.appendChild(code);
+            quadro.appendChild(pre);
+        })
+        .catch(error => {
+            quadro.innerHTML = "";
+            const pre = document.createElement('pre');
+            const code = document.createElement('code');
+            code.innerHTML = error;
+            pre.appendChild(code);
+            quadro.appendChild(pre);
+        });
+
+
 }
 
 
@@ -91,6 +124,8 @@ function verificarCampos(...campos) {
     verificarVazios(...campos);
     verificarEmail(campos[3]);
     verificarCPF(campos[1]);
+    verificarCEP(campos[4]);
+    verificarTelefone(campos[2]);
     verificarSenha(campos[6], campos[7]);
 }
 
@@ -123,6 +158,63 @@ function verificarCPF(cpf) {
 function verificarSenha(senha, confirmacao) {
     if (senha !== confirmacao) {
         throw new Error("Senhas não conferem");
+    }
+}
+
+// Função para verificar se o CEP é válido
+function verificarCEP(cep) {
+    // Remove hífens e espaços em branco
+    cep = cep.replace(/-|\s/g, '');
+
+    // Verifica se o CEP contém exatamente 8 dígitos
+    const re = /^[0-9]{8}$/;
+    if (!re.test(cep)) {
+        throw new Error("CEP inválido");
+    }
+}
+
+
+// Função para verificar se o número é válido
+function verificarTelefone(telefone) {
+    // Remove parênteses, espaços em branco, hífens e o sinal de mais
+    telefone = telefone.replace(/\(|\)|\s|-|\+/g, '');
+
+    // Verifica se o telefone começa com '55' (código do país para o Brasil)
+    if (telefone.startsWith('55')) {
+        telefone = telefone.slice(2);
+    }
+
+    // Verifica se o telefone contém apenas dígitos e tem exatamente 10 ou 11 dígitos
+    const re = /^[0-9]{10,11}$/;
+    if (!re.test(telefone)) {
+        throw new Error("Número de telefone inválido");
+    }
+}
+
+function verificarSenhaForte(senha) {
+    // Verifica se a senha tem pelo menos 8 caracteres
+    if (senha.length < 8) {
+        throw new Error("A senha deve ter pelo menos 8 caracteres");
+    }
+
+    // Verifica se a senha contém pelo menos uma letra maiúscula
+    if (!/[A-Z]/.test(senha)) {
+        throw new Error("A senha deve conter pelo menos uma letra maiúscula");
+    }
+
+    // Verifica se a senha contém pelo menos uma letra minúscula
+    if (!/[a-z]/.test(senha)) {
+        throw new Error("A senha deve conter pelo menos uma letra minúscula");
+    }
+
+    // Verifica se a senha contém pelo menos um número
+    if (!/[0-9]/.test(senha)) {
+        throw new Error("A senha deve conter pelo menos um número");
+    }
+
+    // Verifica se a senha contém pelo menos um caractere especial
+    if (!/[!@#$%^&*]/.test(senha)) {
+        throw new Error("A senha deve conter pelo menos um caractere especial (!@#$%^&*)");
     }
 }
 
